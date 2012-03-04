@@ -1,0 +1,90 @@
+<!doctype html>
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js lt-ie9" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title></title>
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width">
+	<script src="js/prefixfree.min.js"></script>	
+	<script src="js/quantize.js"></script>
+	<link rel="stylesheet" href="css/bootstrap.css" />
+	
+	<style>
+		video { border: 45px solid; display: block; margin: 100px auto; }
+	</style>
+</head>
+<body>
+
+	<video height="480" width="640" autoplay></video>
+	<canvas height="480" width="640" style="display: none"></canvas>
+	
+	<form enctype="multipart/form-data" method="post" style="display: none">
+		<input type="file" accept="video/*;capture=camera" />
+	</form>
+	
+	<script>
+		if (navigator.getUserMedia) {
+			navigator.getUserMedia({audio: true, video: true}, success, error);
+			
+			function success(stream) { 
+			  // ... use 'stream' ... 
+				var video = document.getElementsByTagName('video')[0];
+    			video.src = stream; 
+			} 
+			
+			function error(){ 
+			  // display fallback content 
+			}
+			
+			var video = document.querySelector('video');
+			var canvas = document.querySelector('canvas');
+			var ctx = canvas.getContext('2d');
+
+			setInterval(function () { 
+			  	ctx.drawImage(video, 0, 0, video.width, video.height, 0, 0, canvas.width, canvas.height);
+			  	setDominantCol();
+			}, 1000 / 67);		
+
+
+			function dominantColor(pixels, pixelCount) {
+
+				var pixelArray = [];
+				for (var i = 0; i < pixelCount; i++) {  
+					// If pixel is mostly opaque and not white
+					if(pixels[i*4+3] >= 125){
+						if(!(pixels[i*4] > 250 && pixels[i*4+1] > 250 && pixels[i*4+2] > 250)){
+							pixelArray.push( [pixels[i*4], pixels[i*4+1], pixels[i*4+2]]);
+						}
+					}
+				}
+			
+				// Send array to quantize function which clusters values
+				// using median cut algorithm
+				var cmap = MMCQ.quantize(pixelArray, 16);
+				var newPalette = cmap.palette();
+				
+				var colorArray = {"r": newPalette[0][0], "g": newPalette[0][1], "b": newPalette[0][2]};
+
+				var video = document.querySelector('video');
+				video.setAttribute('style', "border-color:rgb("+colorArray.r+","+colorArray.g+","+colorArray.b+");");
+			}
+			
+			function setDominantCol() {
+				var canvas = document.querySelector('canvas');
+				var ctx = canvas.getContext('2d');
+				var cw = canvas.width;
+				var ch = canvas.height;
+				var pixelCount = cw*ch;
+				ctx.drawImage(video, 0, 0, cw, ch);
+				var pixels = ctx.getImageData(0, 0, cw, ch).data;
+				dominantColor(pixels, pixelCount);
+						
+			}
+		}
+	</script>
+</body>
+</html>
